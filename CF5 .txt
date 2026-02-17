@@ -1,0 +1,513 @@
+-- Services
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local ContentProvider = game:GetService("ContentProvider")
+
+-- --- SECURITY SETTINGS ---
+local GUI_NAME = "CF5_Modern_UI_V2"
+local LP = Players.LocalPlayer
+local PlayerGui = LP:WaitForChild("PlayerGui")
+
+-- Function to ensure the GUI is not easily deleted
+local function protectGui(gui)
+    gui.DescendantRemoving:Connect(function(descendant)
+        if descendant.Name == GUI_NAME then
+            task.wait()
+            gui.Enabled = true -- Attempt to re-enable if disabled
+        end
+    end)
+end
+-- --------------------------
+
+-- Destroy old UI if it exists
+if PlayerGui:FindFirstChild(GUI_NAME) then
+    PlayerGui[GUI_NAME]:Destroy()
+end
+
+-- Create Main ScreenGui in PlayerGui (Safer than CoreGui)
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = GUI_NAME
+ScreenGui.Parent = PlayerGui
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.DisplayOrder = 999999 -- Ensure it's always on top
+protectGui(ScreenGui)
+
+-- --- DRAGGABLE & HOVER FUNCTIONS ---
+local function MakeDraggable(frame, dragHandle)
+    local dragging, dragInput, dragStart, startPos
+    dragHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+    dragHandle.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+local function CreateHoverEffect(button, normalColor, hoverColor)
+    button.MouseEnter:Connect(function()
+        TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = hoverColor}):Play()
+    end)
+    button.MouseLeave:Connect(function()
+        TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = normalColor}):Play()
+    end)
+end
+-- ---------------------------------
+
+-- ==========================================
+-- MAIN FRAME
+-- ==========================================
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(245, 245, 245)
+MainFrame.Position = UDim2.new(0.5, -200, 0.5, -210) 
+MainFrame.Size = UDim2.new(0, 400, 0, 360) 
+MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = false
+
+local UICornerMain = Instance.new("UICorner")
+UICornerMain.CornerRadius = UDim.new(0, 10)
+UICornerMain.Parent = MainFrame
+
+-- Shadow
+local Shadow = Instance.new("ImageLabel")
+Shadow.Name = "Shadow"
+Shadow.Parent = MainFrame
+Shadow.AnchorPoint = Vector2.new(0.5, 0.5)
+Shadow.BackgroundTransparency = 1.000
+Shadow.Position = UDim2.new(0.5, 0, 0.5, 0)
+Shadow.Size = UDim2.new(1, 30, 1, 30)
+Shadow.ZIndex = 0
+Shadow.Image = "rbxassetid://1316045217"
+Shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+Shadow.ImageTransparency = 0.700
+Shadow.ScaleType = Enum.ScaleType.Slice
+Shadow.SliceCenter = Rect.new(10, 10, 118, 118)
+
+-- ==========================================
+-- TOP BAR
+-- ==========================================
+local TopBar = Instance.new("Frame")
+TopBar.Name = "TopBar"
+TopBar.Parent = MainFrame
+TopBar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+TopBar.BorderSizePixel = 0
+TopBar.Size = UDim2.new(1, 0, 0, 40)
+MakeDraggable(MainFrame, TopBar)
+
+local UICornerTop = Instance.new("UICorner")
+UICornerTop.CornerRadius = UDim.new(0, 10)
+UICornerTop.Parent = TopBar
+
+-- Logo Text
+local LogoTextTop = Instance.new("TextLabel")
+LogoTextTop.Name = "LogoTextTop"
+LogoTextTop.Parent = TopBar
+LogoTextTop.BackgroundTransparency = 1.000
+LogoTextTop.Position = UDim2.new(0, 15, 0, 0)
+LogoTextTop.Size = UDim2.new(0, 60, 1, 0)
+LogoTextTop.Font = Enum.Font.GothamBold
+LogoTextTop.Text = "CF5"
+LogoTextTop.TextColor3 = Color3.fromRGB(0, 120, 215)
+LogoTextTop.TextSize = 18.000
+LogoTextTop.TextXAlignment = Enum.TextXAlignment.Left
+
+-- --- TOP MENU BUTTONS ---
+local TopMenuContainer = Instance.new("Frame")
+TopMenuContainer.Name = "TopMenuContainer"
+TopMenuContainer.Parent = TopBar
+TopMenuContainer.BackgroundTransparency = 1
+TopMenuContainer.Position = UDim2.new(0, 75, 0, 0)
+TopMenuContainer.Size = UDim2.new(0, 210, 1, 0)
+
+local UIListLayout_TopMenu = Instance.new("UIListLayout")
+UIListLayout_TopMenu.Parent = TopMenuContainer
+UIListLayout_TopMenu.FillDirection = Enum.FillDirection.Horizontal
+UIListLayout_TopMenu.VerticalAlignment = Enum.VerticalAlignment.Center
+UIListLayout_TopMenu.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout_TopMenu.Padding = UDim.new(0, 5)
+
+-- Log Area Reference
+local LogAreaRef = nil 
+
+local function CreateTopButton(text, actionLog)
+    local btn = Instance.new("TextButton")
+    btn.Parent = TopMenuContainer
+    btn.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+    btn.Size = UDim2.new(0, 65, 0, 25)
+    btn.Font = Enum.Font.GothamSemibold
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(50, 50, 50)
+    btn.TextSize = 11.000
+    btn.AutoButtonColor = false
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = btn
+    
+    btn.MouseButton1Click:Connect(function()
+        if LogAreaRef then
+            LogAreaRef.Text = "Status: " .. actionLog
+            LogAreaRef.TextColor3 = Color3.fromRGB(0, 120, 215)
+        end
+    end)
+    
+    CreateHoverEffect(btn, Color3.fromRGB(240, 240, 240), Color3.fromRGB(220, 220, 220))
+    return btn
+end
+
+CreateTopButton("Commands", "Commands Panel Opened")
+CreateTopButton("Settings", "Settings Panel Opened")
+CreateTopButton("Help", "Help Panel Opened")
+-- ---------------------------------
+
+-- Close Button
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Name = "CloseBtn"
+CloseBtn.Parent = TopBar
+CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+CloseBtn.Position = UDim2.new(1, -30, 0, 10)
+CloseBtn.Size = UDim2.new(0, 20, 0, 20)
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.Text = "✕"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.TextSize = 12.000
+CloseBtn.AutoButtonColor = false
+
+local UICornerClose = Instance.new("UICorner")
+UICornerClose.CornerRadius = UDim.new(1, 0)
+UICornerClose.Parent = CloseBtn
+
+CreateHoverEffect(CloseBtn, Color3.fromRGB(255, 100, 100), Color3.fromRGB(255, 50, 50))
+CloseBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false end) -- Hide instead of destroy
+
+-- ==========================================
+-- SIDEBAR (LEFT)
+-- ==========================================
+local Sidebar = Instance.new("Frame")
+Sidebar.Name = "Sidebar"
+Sidebar.Parent = MainFrame
+Sidebar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Sidebar.BorderSizePixel = 0
+Sidebar.Position = UDim2.new(0, 0, 0, 40)
+Sidebar.Size = UDim2.new(0, 80, 1, -40)
+
+local UICornerSide = Instance.new("UICorner")
+UICornerSide.CornerRadius = UDim.new(0, 10)
+UICornerSide.Parent = Sidebar
+
+-- --- SIDE LOGO ---
+local SideLogoContainer = Instance.new("Frame")
+SideLogoContainer.Name = "SideLogoContainer"
+SideLogoContainer.Parent = Sidebar
+SideLogoContainer.BackgroundTransparency = 1
+SideLogoContainer.Position = UDim2.new(0, 0, 0, 0)
+SideLogoContainer.Size = UDim2.new(1, 0, 0, 95)
+
+local UIListLayout_SideLogo = Instance.new("UIListLayout")
+UIListLayout_SideLogo.Parent = SideLogoContainer
+UIListLayout_SideLogo.HorizontalAlignment = Enum.HorizontalAlignment.Center
+UIListLayout_SideLogo.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout_SideLogo.Padding = UDim.new(0, -15)
+
+local function CreateSideLogoText(text, size)
+    local lbl = Instance.new("TextLabel")
+    lbl.Parent = SideLogoContainer
+    lbl.BackgroundTransparency = 1
+    lbl.Size = UDim2.new(1, 0, 0, 38)
+    lbl.Font = Enum.Font.GothamBlack
+    lbl.Text = text
+    lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+    lbl.TextSize = size
+end
+
+CreateSideLogoText("C", 42)
+CreateSideLogoText("F", 42)
+CreateSideLogoText("5", 42)
+-- ----------------------------------------------------
+
+-- Icon Container
+local IconContainer = Instance.new("Frame")
+IconContainer.Name = "IconContainer"
+IconContainer.Parent = Sidebar
+IconContainer.BackgroundTransparency = 1.000
+IconContainer.Position = UDim2.new(0, 0, 0, 100)
+IconContainer.Size = UDim2.new(1, 0, 1, -100)
+
+local UIListLayout_Icons = Instance.new("UIListLayout")
+UIListLayout_Icons.Parent = IconContainer
+UIListLayout_Icons.HorizontalAlignment = Enum.HorizontalAlignment.Center
+UIListLayout_Icons.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout_Icons.Padding = UDim.new(0, 2)
+
+-- Icon Function
+local function CreateModernIcon(assetId, callback)
+    local btn = Instance.new("ImageButton")
+    btn.Name = "IconBtn"
+    btn.Parent = IconContainer
+    btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20) 
+    btn.Size = UDim2.new(0, 48, 0, 48)
+    
+    local imageUrl = "rbxassetid://" .. assetId
+    btn.Image = imageUrl
+    
+    btn.ImageColor3 = Color3.fromRGB(255, 255, 255)
+    btn.ScaleType = Enum.ScaleType.Fit
+    btn.BorderSizePixel = 0
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = btn
+    
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(50, 50, 50)
+    stroke.Thickness = 2
+    stroke.Parent = btn
+    
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(stroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(100, 100, 100)}):Play()
+        TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
+    end)
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(stroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(50, 50, 50)}):Play()
+        TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(20, 20, 20)}):Play()
+    end)
+
+    btn.MouseButton1Click:Connect(callback)
+    
+    -- ContentProvider:PreloadAsync({imageUrl}) -- Removed for faster loading, add back if images don't load
+    return btn
+end
+
+-- ==========================================
+-- ICON CALLBACKS & SCRIPTS
+-- ==========================================
+
+-- Icon 1: Script Updated (Axion Move Blocks)
+CreateModernIcon("75012687595589", function()
+    LogAreaRef.Text = "Status: Executing Axion..."
+    
+    -- --- SCRIPT ICON 1 ---
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/axionscripts1/Move-Blocks-v20/refs/heads/main/README.md"))()
+    -- ---------------------
+    
+    LogAreaRef.Text = "Status: Axion Executed"
+    LogAreaRef.TextColor3 = Color3.fromRGB(50, 200, 50)
+end)
+
+-- Icon 2: Script Updated
+CreateModernIcon("107012949786412", function()
+    LogAreaRef.Text = "Status: Executing Script 2..."
+    
+    -- --- SCRIPT ICON 2 ---
+    loadstring(game:HttpGet("https://idx.lol/latest.lua"))()
+    -- ---------------------
+    
+    LogAreaRef.Text = "Status: Script 2 Executed"
+    LogAreaRef.TextColor3 = Color3.fromRGB(50, 200, 50)
+end)
+
+-- Icon 3: Script Updated
+CreateModernIcon("72497048403315", function()
+    LogAreaRef.Text = "Status: Executing Script 3..."
+    
+    -- --- SCRIPT ICON 3 ---
+    loadstring(game:HttpGet('https://bitbucket.org/projects_early26/new/raw/0cd464afb03269ef1134a30fc8c407162e88dcac/v1.2.5.lua'))()
+    -- ---------------------
+    
+    LogAreaRef.Text = "Status: Script 3 Executed"
+    LogAreaRef.TextColor3 = Color3.fromRGB(50, 200, 50)
+end)
+
+-- Icon 4: Custom Script (Pastebin Updated)
+CreateModernIcon("114739408733721", function()
+    LogAreaRef.Text = "Status: Executing Pastebin Script..."
+    
+    -- --- SCRIPT ICON 4 ---
+    loadstring(game:HttpGet("https://pastebin.com/raw/DCsnCGAv"))()
+    -- ---------------------
+    
+    LogAreaRef.Text = "Status: Pastebin Script Executed"
+    LogAreaRef.TextColor3 = Color3.fromRGB(50, 200, 50)
+end)
+
+-- ==========================================
+-- CONTENT AREA (RIGHT)
+-- ==========================================
+local ContentArea = Instance.new("Frame")
+ContentArea.Name = "ContentArea"
+ContentArea.Parent = MainFrame
+ContentArea.BackgroundTransparency = 1.000
+ContentArea.Position = UDim2.new(0, 80, 0, 40)
+ContentArea.Size = UDim2.new(1, -80, 1, -40)
+
+-- Script Editor
+local ScriptEditor = Instance.new("TextBox")
+ScriptEditor.Name = "ScriptEditor"
+ScriptEditor.Parent = ContentArea
+ScriptEditor.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+ScriptEditor.Position = UDim2.new(0, 10, 0, 10)
+ScriptEditor.Size = UDim2.new(1, -20, 0, 180)
+ScriptEditor.ClearTextOnFocus = false
+ScriptEditor.Font = Enum.Font.Code
+ScriptEditor.MultiLine = true
+ScriptEditor.PlaceholderText = "-- Type script here..."
+ScriptEditor.Text = ""
+ScriptEditor.TextColor3 = Color3.fromRGB(0, 0, 0)
+ScriptEditor.TextSize = 13.000
+ScriptEditor.TextXAlignment = Enum.TextXAlignment.Left
+ScriptEditor.TextYAlignment = Enum.TextYAlignment.Top
+
+local UICornerEditor = Instance.new("UICorner")
+UICornerEditor.CornerRadius = UDim.new(0, 8)
+UICornerEditor.Parent = ScriptEditor
+
+local UIStrokeEditor = Instance.new("UIStroke")
+UIStrokeEditor.Color = Color3.fromRGB(220, 220, 220)
+UIStrokeEditor.Parent = ScriptEditor
+
+-- Button Bar
+local ButtonBar = Instance.new("Frame")
+ButtonBar.Name = "ButtonBar"
+ButtonBar.Parent = ContentArea
+ButtonBar.BackgroundTransparency = 1.000
+ButtonBar.Position = UDim2.new(0, 10, 0, 200)
+ButtonBar.Size = UDim2.new(1, -20, 0, 35)
+
+local UIListLayout_Buttons = Instance.new("UIListLayout")
+UIListLayout_Buttons.Parent = ButtonBar
+UIListLayout_Buttons.FillDirection = Enum.FillDirection.Horizontal
+UIListLayout_Buttons.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout_Buttons.Padding = UDim.new(0, 5)
+
+local function CreateModernButton(text)
+    local btn = Instance.new("TextButton")
+    btn.Name = text .. "Btn"
+    btn.Parent = ButtonBar
+    btn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    btn.Size = UDim2.new(0.32, 0, 1, 0)
+    btn.Font = Enum.Font.GothamBold
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.TextSize = 14.000
+    btn.AutoButtonColor = false
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = btn
+
+    CreateHoverEffect(btn, Color3.fromRGB(0, 0, 0), Color3.fromRGB(50, 50, 50))
+    return btn
+end
+
+local OpenBtn = CreateModernButton("Open")
+local ExecuteBtn = CreateModernButton("Execute")
+local ClearBtn = CreateModernButton("Clear")
+
+-- ==========================================
+-- LOG AREA
+-- ==========================================
+local LogArea = Instance.new("Frame")
+LogArea.Name = "LogArea"
+LogArea.Parent = ContentArea
+LogArea.BackgroundColor3 = Color3.fromRGB(230, 230, 230)
+LogArea.Position = UDim2.new(0, 10, 0, 245)
+LogArea.Size = UDim2.new(1, -20, 0, 45)
+
+local UICornerLog = Instance.new("UICorner")
+UICornerLog.CornerRadius = UDim.new(0, 8)
+UICornerLog.Parent = LogArea
+
+local LogLabel = Instance.new("TextLabel")
+LogLabel.Name = "LogLabel"
+LogLabel.Parent = LogArea
+LogLabel.BackgroundTransparency = 1.000
+LogLabel.Size = UDim2.new(1, -10, 1, 0)
+LogLabel.Position = UDim2.new(0, 10, 0, 0)
+LogLabel.Font = Enum.Font.GothamBold
+LogLabel.Text = "Status: Idle"
+LogLabel.TextColor3 = Color3.fromRGB(100, 100, 100)
+LogLabel.TextSize = 12.000
+LogLabel.TextXAlignment = Enum.TextXAlignment.Left
+LogLabel.TextWrapped = true
+
+LogAreaRef = LogLabel
+
+-- ==========================================
+-- TOGGLE BUTTON (ICON OUTSIDE)
+-- ==========================================
+local ToggleButton = Instance.new("ImageButton")
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Parent = ScreenGui
+ToggleButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+ToggleButton.Position = UDim2.new(0, 10, 0.5, -25)
+ToggleButton.Size = UDim2.new(0, 50, 0, 50)
+ToggleButton.Image = "rbxassetid://104493729902121"
+ToggleButton.ScaleType = Enum.ScaleType.Fit
+ToggleButton.ImageColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.BorderSizePixel = 0
+
+local UICornerToggle = Instance.new("UICorner")
+UICornerToggle.CornerRadius = UDim.new(1, 0)
+UICornerToggle.Parent = ToggleButton
+
+local UIStrokeToggle = Instance.new("UIStroke")
+UIStrokeToggle.Color = Color3.fromRGB(0, 120, 215)
+UIStrokeToggle.Thickness = 2
+UIStrokeToggle.Parent = ToggleButton
+
+-- Toggle Function
+ToggleButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+-- Draggable for Toggle Button
+MakeDraggable(ToggleButton, ToggleButton)
+-- ==========================================
+
+-- ==========================================
+-- EXECUTION LOGIC
+-- ==========================================
+ExecuteBtn.MouseButton1Click:Connect(function()
+    LogLabel.Text = "Status: Executing Custom Script..."
+    LogLabel.TextColor3 = Color3.fromRGB(50, 50, 50)
+    
+    local success, err = pcall(function() 
+        loadstring(ScriptEditor.Text)() 
+    end)
+    
+    if success then
+        LogLabel.Text = "Status: Script executed successfully!"
+        LogLabel.TextColor3 = Color3.fromRGB(50, 200, 50)
+    else
+        LogLabel.Text = "Status: Error - " .. tostring(err)
+        LogLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+        warn("CF5 Error:", err)
+    end
+end)
+
+ClearBtn.MouseButton1Click:Connect(function() 
+    ScriptEditor.Text = "" 
+    LogLabel.Text = "Status: Ready"
+    LogLabel.TextColor3 = Color3.fromRGB(100, 100, 100)
+end)
+
+OpenBtn.MouseButton1Click:Connect(function()
+    LogLabel.Text = "Status: Open feature not implemented."
+    LogLabel.TextColor3 = Color3.fromRGB(255, 150, 0)
+end)
